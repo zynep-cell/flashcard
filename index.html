@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shibumi Odak | KPSS Flashcard</title>
+    <!-- PDF.js Kütüphanesi -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         :root {
@@ -174,7 +175,7 @@
             background-color: var(--card-bg);
             border-radius: 12px;
             border: 1px solid var(--border-color);
-            overflow-y: auto; /* İçerik taşarsa kaydırma çubuğu */
+            overflow-y: auto;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
@@ -192,11 +193,6 @@
             justify-content: flex-start;
         }
 
-        .card-back ul {
-            padding-left: 1.5rem;
-            margin-top: 1rem;
-        }
-
         .controls {
             display: flex;
             gap: 1rem;
@@ -212,10 +208,6 @@
             font-size: 0.9rem;
         }
 
-        /* Yardımcı Sınıflar */
-        .hidden { display: none !important; }
-        
-        /* Kaydırma Çubuğu Özelleştirme */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
@@ -229,7 +221,7 @@
     </header>
 
     <div id="input-view">
-        <textarea id="source-text" placeholder="Metni buraya yapıştırın...&#10;&#10;KURAL:&#10;İlk satır soru olur.&#10;Altındaki tüm satırlar/maddeler tek bir cevap bütününü oluşturur.&#10;Yeni bir karta geçmek için boş bir satır (çift enter) bırakın."></textarea>
+        <textarea id="source-text" placeholder="Metni buraya yapıştırın...&#10;&#10;SİSTEM MANTIĞI:&#10;1. Soru işaretine (?) kadar olan kısım soru olur.&#10;2. Soru işareti yoksa, iki noktaya (:) kadar olan kısım soru olur.&#10;3. Kalan her şey cevap (arka yüz) olarak kabul edilir.&#10;4. Farklı kartlar arasında mutlaka BİR BOŞ SATIR (Çift Enter) bırakın."></textarea>
         
         <div class="file-upload-wrapper">
             <label for="pdf-upload" class="file-upload-label" id="pdf-label">
@@ -246,10 +238,8 @@
         
         <div class="card-container" onclick="flipCard()">
             <div class="card" id="flashcard">
-                <div class="card-face card-front" id="card-front-content">
-                    </div>
-                <div class="card-face card-back" id="card-back-content">
-                    </div>
+                <div class="card-face card-front" id="card-front-content"></div>
+                <div class="card-face card-back" id="card-back-content"></div>
             </div>
         </div>
 
@@ -260,14 +250,13 @@
     </div>
 
     <script>
-        // PDF.js Worker Tanımlaması (Zorunlu)
+        // PDF.js Worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // Durum Değişkenleri
         let flashcards = [];
         let currentIndex = 0;
 
-        // PDF Yükleme ve Metin Çıkarma İşlemi
+        // PDF Yükleme
         document.getElementById('pdf-upload').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -285,34 +274,63 @@
                 const textContent = await page.getTextContent();
                 const pageText = textContent.items.map(item => item.str).join(' ');
                 
-                // PDF'den gelen karmaşık metni temel bir düzene sokmaya çalışıyoruz
-                // Noktalardan sonra satır atlatarak bir nebze soru-cevap formatına yaklaştırıyoruz
                 fullText += pageText.replace(/\. /g, '.\n') + "\n\n";
             }
 
             document.getElementById('source-text').value = fullText;
-            label.innerText = "PDF Başarıyla Yüklendi! (Gerekirse metni düzenleyin)";
+            label.innerText = "PDF Başarıyla Yüklendi! (Kartları ayırmak için gerekirse boş satırlar bırakın)";
         });
 
-        // Metni Parçalama ve Kartları Oluşturma Mantığı (Altın Kural)
+        // AKILLI KART ÜRETİM MANTIĞI (? ve : Tespiti)
         function generateCardsFromText(text) {
             const cards = [];
-            // Çift boşluk/satır atlamaya göre metni bloklara böl
+            // Çift Enter (boş satır) ile farklı soruları birbirinden ayır
             const blocks = text.trim().split(/\n\s*\n/);
 
             blocks.forEach(block => {
-                // Her bloğu satırlara ayır
-                const lines = block.trim().split('\n').filter(line => line.trim() !== '');
+                let question = "";
+                let answer = "";
                 
-                if (lines.length > 1) {
-                    const question = lines[0]; // İlk satır kesinlikle soru
-                    // Geri kalan tüm satırları asla bölmeden, <br> ile birleştirerek cevaba yaz
-                    const answer = lines.slice(1).join('<br> • '); 
-                    
-                    cards.push({
-                        q: question,
-                        a: "• " + answer // Madde imi ekleyerek şık gösteriyoruz
-                    });
+                // Metni tek bir string olarak alıp baştaki sondaki boşlukları temizle
+                let cleanBlock = block.trim();
+                if(!cleanBlock) return;
+
+                const qIndex = cleanBlock.indexOf('?');
+                const cIndex = cleanBlock.indexOf(':');
+
+                let splitIndex = -1;
+
+                // Bölünme noktasını belirle (Önce ?, yoksa :)
+                if (qIndex !== -1 && cIndex !== -1) {
+                    splitIndex = Math.min(qIndex, cIndex); // Hangisi önce geliyorsa
+                } else if (qIndex !== -1) {
+                    splitIndex = qIndex;
+                } else if (cIndex !== -1) {
+                    splitIndex = cIndex;
+                }
+
+                // Soru işareti veya iki nokta bulunduysa
+                if (splitIndex !== -1) {
+                    question = cleanBlock.substring(0, splitIndex + 1).trim();
+                    answer = cleanBlock.substring(splitIndex + 1).trim();
+                } else {
+                    // Hiçbiri yoksa kurtarıcı sistem: İlk satır soru, gerisi cevap
+                    const lines = cleanBlock.split('\n');
+                    question = lines[0].trim();
+                    answer = lines.slice(1).join('\n').trim();
+                }
+
+                // Cevabı maddeler halinde şık bir şekilde formatla (Altın Kural Korunuyor)
+                if (question) {
+                    let formattedAnswer = "";
+                    if (answer) {
+                        const answerLines = answer.split('\n').filter(l => l.trim() !== '');
+                        formattedAnswer = "• " + answerLines.join('<br><br> • ');
+                    } else {
+                        formattedAnswer = "Cevap eklenmemiş.";
+                    }
+
+                    cards.push({ q: question, a: formattedAnswer });
                 }
             });
             return cards;
@@ -324,11 +342,10 @@
             flashcards = generateCardsFromText(text);
 
             if (flashcards.length === 0) {
-                alert("Lütfen formata uygun metin girin. (1 satır soru, altındaki satırlar cevap olmalı ve kartlar arası boşluk bırakılmalıdır.)");
+                alert("Metin algılanamadı. Lütfen giriş alanına veri ekleyin.");
                 return;
             }
 
-            // Arayüzü değiştir
             document.getElementById('input-view').style.display = 'none';
             document.getElementById('study-view').style.display = 'flex';
             
@@ -336,7 +353,7 @@
             renderCard();
         }
 
-        // Kartı Ekrana Çiz
+        // Kartı Çiz
         function renderCard() {
             if (flashcards.length === 0) {
                 document.getElementById('card-front-content').innerHTML = "Tebrikler!";
@@ -347,9 +364,8 @@
             }
 
             const card = document.getElementById('flashcard');
-            card.classList.remove('is-flipped'); // Kartı ön yüze çevir
+            card.classList.remove('is-flipped'); 
 
-            // Animasyonun bitmesini bekleyip içeriği değiştir (pürüzsüz geçiş için)
             setTimeout(() => {
                 document.getElementById('card-front-content').innerHTML = flashcards[currentIndex].q;
                 document.getElementById('card-back-content').innerHTML = flashcards[currentIndex].a;
@@ -357,33 +373,21 @@
             }, 150);
         }
 
-        // Kart Döndürme Animasyonu
         function flipCard() {
             if (flashcards.length > 0) {
                 document.getElementById('flashcard').classList.toggle('is-flipped');
             }
         }
 
-        // "Öğrendim" Butonu - Kartı desteden çıkarır
         function learnedCard() {
             if (flashcards.length === 0) return;
-            
-            // Mevcut kartı diziden sil
             flashcards.splice(currentIndex, 1);
-            
-            // Eğer sildiğimiz kart son kartsaysa indexi ayarla
-            if (currentIndex >= flashcards.length) {
-                currentIndex = 0;
-            }
-            
+            if (currentIndex >= flashcards.length) currentIndex = 0;
             renderCard();
         }
 
-        // "Tekrar Et" Butonu - Kartı sona atar veya geçici olarak atlar
         function repeatCard() {
             if (flashcards.length === 0) return;
-            
-            // Bir sonraki karta geç, sona ulaştıysan başa dön
             currentIndex = (currentIndex + 1) % flashcards.length;
             renderCard();
         }
