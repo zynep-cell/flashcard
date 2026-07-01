@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> Odak | KPSS Flashcard</title>
+    <title>Shibumi Odak | KPSS Flashcard</title>
+    <!-- PDF.js Kütüphanesi -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         :root {
@@ -12,7 +13,7 @@
             --text-main: #e0e0e0;
             --text-muted: #888888;
             --border-color: #333333;
-            --accent: #4a4a4a;
+            --accent: #6b6b6b;
             --transition: 0.3s ease;
         }
 
@@ -38,14 +39,22 @@
 
         button {
             background-color: var(--text-main); color: var(--bg-color); border: none;
-            padding: 0.8rem 1.5rem; font-size: 1rem; border-radius: 4px; cursor: pointer; transition: opacity var(--transition);
+            padding: 0.8rem 1.5rem; font-size: 1rem; border-radius: 6px; cursor: pointer; transition: all var(--transition);
         }
-        button:hover { opacity: 0.9; }
+        button:hover { transform: translateY(-2px); opacity: 0.9; }
+        
         .btn-outline { background-color: transparent; color: var(--text-main); border: 1px solid var(--border-color); }
         .btn-outline:hover { background-color: var(--card-bg); }
         .btn-danger { background-color: transparent; color: #ff5555; border: 1px dashed #ff5555; }
         .btn-danger:hover { background-color: rgba(255, 85, 85, 0.1); }
-        .btn-small { padding: 0.4rem 0.8rem; font-size: 0.85rem; }
+        .btn-small { padding: 0.5rem 1rem; font-size: 0.85rem; }
+
+        /* ANA SAYFA BUTONU */
+        .btn-home {
+            background-color: #2a2a2a; color: white; border: 1px solid #444;
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px;
+        }
+        .btn-home:hover { background-color: #333; border-color: #555; }
 
         /* --- Ana Sayfa Ekranı (Dashboard) --- */
         #dashboard-view { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 2rem; }
@@ -73,76 +82,71 @@
         .deck-count { font-size: 0.8rem; color: var(--text-muted); }
         .deck-actions { display: flex; gap: 0.5rem; }
 
-        #restore-toast {
-            display: none; justify-content: space-between; align-items: center;
-            padding: 1rem; background-color: #2a2a2a; border-radius: 8px; margin-top: 1rem; border: 1px solid #ffaa00;
-        }
-
         /* --- Çalışma Ekranı (Study View) --- */
-        #study-view { display: none; width: 100%; max-width: 500px; flex-direction: column; align-items: center; gap: 1.5rem; position: relative; }
+        #study-view { display: none; width: 100%; max-width: 550px; flex-direction: column; align-items: center; gap: 1.5rem; position: relative; }
         
-        .study-header { display: flex; justify-content: space-between; width: 100%; align-items: center; }
-        #study-deck-title { font-size: 1.2rem; color: var(--text-main); }
-        #progress-text { color: var(--text-muted); font-size: 0.9rem; }
+        .study-header { display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 1rem; }
+        #study-deck-title { font-size: 1.1rem; color: var(--text-muted); }
+        #progress-text { color: var(--text-muted); font-size: 0.9rem; margin-top: -10px; }
 
-        .card-container { width: 100%; height: 380px; perspective: 1000px; cursor: pointer; }
+        .card-container { width: 100%; height: 400px; perspective: 1000px; cursor: pointer; }
         .card { width: 100%; height: 100%; position: relative; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; }
         .card.is-flipped { transform: rotateY(180deg); }
         .card-face {
             position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
-            display: flex; flex-direction: column; justify-content: center; padding: 2rem;
+            display: flex; flex-direction: column; justify-content: center; padding: 2.5rem;
             background-color: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        .card-front { align-items: center; text-align: center; font-size: 1.2rem; font-weight: 500; }
-        .card-back { transform: rotateY(180deg); font-size: 0.95rem; align-items: flex-start; justify-content: flex-start; }
+        .card-front { align-items: center; text-align: center; font-size: 1.25rem; font-weight: 500; }
+        .card-back { transform: rotateY(180deg); font-size: 1rem; align-items: flex-start; justify-content: flex-start; }
         
         .controls { display: flex; gap: 0.5rem; width: 100%; }
-        .controls button { flex: 1; }
-        .btn-icon { flex: 0.3 !important; font-size: 1.2rem; }
+        .controls button { flex: 1; padding: 1rem; font-size: 1.1rem;}
+        .btn-icon { flex: 0.3 !important; font-size: 1.5rem; padding: 0.5rem;}
 
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
     </style>
 </head>
 <body>
 
     <header>
         <h1>SHIBUMI ODAK</h1>
-        <div class="subtitle">Minimalist Bilgi Kartı Sistemi</div>
+        <div class="subtitle">Minimalist Flashcard Sistemi</div>
     </header>
 
+    <!-- ANA SAYFA -->
     <div id="dashboard-view">
         <div class="library-section">
             <div class="section-title">Kayıtlı Desteleriniz</div>
-            <div id="deck-list">
-                </div>
-            <div id="restore-toast">
-                <span>Deste silindi.</span>
-                <button class="btn-outline btn-small" onclick="restoreDeck()">Geri Yükle</button>
-            </div>
+            <div id="deck-list"></div>
         </div>
 
         <div class="create-section">
             <div class="section-title">Yeni Deste Oluştur</div>
-            <input type="text" id="deck-name-input" placeholder="Deste İsmi (örn: Tarih - İnkılap)" />
+            <input type="text" id="deck-name-input" placeholder="Deste İsmi (örn: KPSS Tarih Deneme 1)" />
             
             <div class="file-upload-wrapper">
                 <label for="pdf-upload" class="file-upload-label" id="pdf-label">
-                    + PDF Yükle (Otomatik Ayrıştır)
+                    + PDF Yükle (Otomatik Soru Avcısı)
                 </label>
                 <input type="file" id="pdf-upload" accept="application/pdf" />
             </div>
 
             <textarea id="source-text" placeholder="Veya metni doğrudan buraya yapıştırın..."></textarea>
-            
             <button onclick="createDeck()">Desteyi Oluştur ve Kaydet</button>
         </div>
     </div>
 
+    <!-- ÇALIŞMA EKRANI -->
     <div id="study-view">
         <div class="study-header">
-            <button class="btn-outline btn-small" onclick="goHome()">← Ana Sayfa</button>
+            <!-- BELİRGİN ANA SAYFA BUTONU -->
+            <button class="btn-home" onclick="goHome()">
+                🏠 Ana Sayfa
+            </button>
             <div id="study-deck-title">Deste Adı</div>
         </div>
         
@@ -156,7 +160,7 @@
         </div>
 
         <div class="controls" id="study-controls">
-            <button class="btn-outline btn-icon" title="Son Öğrenileni Geri Al" onclick="undoCard()">↺</button>
+            <button class="btn-outline btn-icon" title="Öğrenileni Geri Al" onclick="undoCard()">↺</button>
             <button class="btn-outline" onclick="repeatCard()">Tekrar Et</button>
             <button onclick="learnedCard()">Öğrendim</button>
         </div>
@@ -166,20 +170,14 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         let decks = [];
-        let deletedDeckCache = null; // Geri yükleme için önbellek
-        
-        // Çalışma durumu değişkenleri
         let currentDeckId = null;
         let studyQueue = [];
-        let learnedStack = []; // Geri alma (Undo) işlemi için öğrenilenleri tutar
+        let learnedStack = [];
         let currentIndex = 0;
 
-        // Başlangıçta Desteleri Yükle
         window.onload = () => {
             const savedDecks = localStorage.getItem('shibumi_decks');
-            if (savedDecks) {
-                decks = JSON.parse(savedDecks);
-            }
+            if (savedDecks) decks = JSON.parse(savedDecks);
             renderDashboard();
         };
 
@@ -188,15 +186,14 @@
             renderDashboard();
         }
 
-        // PDF Okuma İşlemi
+        // PDF Yükleme ve Düzeltme
         document.getElementById('pdf-upload').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (!file) return;
 
             const label = document.getElementById('pdf-label');
-            label.innerText = "PDF Okunuyor...";
-
-            // Eğer deste ismi boşsa dosya adını koy
+            label.innerText = "PDF Okunuyor, lütfen bekleyin...";
+            
             const nameInput = document.getElementById('deck-name-input');
             if(!nameInput.value) nameInput.value = file.name.replace('.pdf', '');
 
@@ -210,34 +207,40 @@
                 let lastY = -1;
                 textContent.items.forEach(item => {
                     if (lastY !== item.transform[5] && lastY !== -1) fullText += '\n';
-                    fullText += item.str + ' ';
+                    fullText += item.str;
                     lastY = item.transform[5];
                 });
-                fullText += "\n\n"; 
+                fullText += "\n"; 
             }
 
-            fullText = fullText.replace(/([a-zğüşöçı])-\n([a-zğüşöçı])/g, '$1$2'); 
+            // Cümle ortasında alt satıra geçen kelimeleri birleştir (örn: "İstan-\nbul")
+            fullText = fullText.replace(/([a-zğüşöçı])-\n([a-zğüşöçı])/gi, '$1$2');
+            
+            // Eğer cümlenin sonu nokta/soru işareti değilse ve alt satıra geçmişse tek satır yap (soru bölünmesini engeller)
+            fullText = fullText.replace(/([^\.\?\!\:\;\n])\n(?=[a-zğüşöçı])/gi, '$1 ');
+
             document.getElementById('source-text').value = fullText;
-            label.innerText = "PDF Yüklendi! Değişiklik yapabilir veya oluşturabilirsiniz.";
+            label.innerText = "PDF Yüklendi! (Gerekirse aşağıdaki metni düzenleyebilirsiniz)";
         });
 
-        // GELİŞMİŞ AYRIŞTIRICI (Regex Kanama Çözümü)
+        // 🚀 YENİ VE GÜÇLÜ SORU AVCI ALGORİTMASI 
         function generateCardsFromText(text) {
             const cards = [];
             
-            // 1. ADIM: Soru başlangıçlarını tespit eden agresif kural.
-            // (1., 1), Soru 1:, Soru 1 - vb. formatları kesin olarak ayırır)
-            // Bu sayede "cevap içine sonraki soru sızması" önlenir.
-            let chunks = text.split(/\n(?=\s*\d+[\.\)]\s|\s*Soru\s*\d+\s*:?\s*)/i);
+            // ADIM 1: Metindeki "1.", "2)", "15-" veya "Soru 3:" yapılarını bulup başlarına GİZLİ AYRAÇ (|||) koyar.
+            // Bu sayede PDF ne kadar bitişik olursa olsun, numaraları gördüğü an bıçağı vurur.
+            let splitText = text.replace(/(^|\n|[\.\?\!]\s+)(\d+[\.\)-]\s+|Soru\s*\d+\s*[:\-]?\s*)/gi, '$1|||$2');
             
-            if (chunks.length <= 1) {
-                // Eğer metinde numaralandırma yoksa, çift paragrafa göre böl
+            let chunks = splitText.split('|||');
+
+            // Eğer numaralandırma hiç yoksa, klasik olarak çift satır boşluklarına göre böler
+            if (chunks.length <= 2) {
                 chunks = text.split(/\n\s*\n/);
             }
 
             chunks.forEach(chunk => {
                 let cleanChunk = chunk.trim();
-                if (cleanChunk.length < 5) return;
+                if (cleanChunk.length < 5) return; // Çok kısa hatalı parçaları atla
 
                 let question = "";
                 let answer = "";
@@ -245,6 +248,7 @@
                 const qIndex = cleanChunk.indexOf('?');
                 const cIndex = cleanChunk.indexOf(':');
 
+                // Soru İşareti veya İki Nokta tespiti
                 if (qIndex !== -1) {
                     question = cleanChunk.substring(0, qIndex + 1).trim();
                     answer = cleanChunk.substring(qIndex + 1).trim();
@@ -252,16 +256,24 @@
                     question = cleanChunk.substring(0, cIndex + 1).trim();
                     answer = cleanChunk.substring(cIndex + 1).trim();
                 } else {
+                    // İşaret yoksa ilk satır soru, gerisi cevap
                     const lines = cleanChunk.split('\n');
-                    question = lines[0].trim();
-                    answer = lines.slice(1).join('\n').trim();
+                    if(lines.length > 1) {
+                        question = lines[0].trim();
+                        answer = lines.slice(1).join('\n').trim();
+                    } else {
+                        question = cleanChunk;
+                        answer = "Ayrıntılı cevap/maddeler bulunamadı.";
+                    }
                 }
 
-                if (question && answer) {
-                    const formattedAnswer = "• " + answer.replace(/\n/g, '<br> • ');
+                // Ön yüz ve Arka yüz hazırlığı (Altın kural: Maddeler bölünmez)
+                if (question) {
+                    let formattedAnswer = answer;
+                    if(answer && answer !== "Ayrıntılı cevap/maddeler bulunamadı.") {
+                        formattedAnswer = "• " + answer.replace(/\n/g, '<br><br> • ');
+                    }
                     cards.push({ q: question, a: formattedAnswer });
-                } else if (question && !answer) {
-                    cards.push({ q: question, a: "Bu sorunun cevabı metinden çıkarılamadı veya yoruma dayalı." });
                 }
             });
 
@@ -269,47 +281,44 @@
         }
 
         function createDeck() {
-            const name = document.getElementById('deck-name-input').value.trim() || `Yeni Deste ${decks.length + 1}`;
             const text = document.getElementById('source-text').value;
+            if (!text.trim()) return alert("Lütfen metin girin veya PDF yükleyin.");
+
             const newCards = generateCardsFromText(text);
+            if (newCards.length === 0) return alert("Soru algılanamadı.");
 
-            if (newCards.length === 0) {
-                alert("Metin anlaşılamadı. Lütfen içeriği kontrol edin.");
-                return;
-            }
-
-            const newDeck = {
+            const name = document.getElementById('deck-name-input').value.trim() || `Deste ${decks.length + 1}`;
+            
+            decks.push({
                 id: Date.now().toString(),
                 name: name,
                 cards: newCards,
                 total: newCards.length
-            };
+            });
 
-            decks.push(newDeck);
             saveToLocal();
-            
-            // Alanları Temizle
             document.getElementById('deck-name-input').value = '';
             document.getElementById('source-text').value = '';
-            document.getElementById('pdf-label').innerText = "+ PDF Yükle (Otomatik Ayrıştır)";
+            document.getElementById('pdf-label').innerText = "+ PDF Yükle (Otomatik Soru Avcısı)";
+            
+            // Kullanıcıya kaç soru çıktığını söyleyelim ki 400 soruda 36 hata şoku yaşamasın :)
+            alert(`${newCards.length} adet soru başarıyla ayrıştırıldı ve desteye eklendi!`);
         }
 
         function renderDashboard() {
             const list = document.getElementById('deck-list');
             list.innerHTML = '';
-
             if (decks.length === 0) {
-                list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Henüz kayıtlı desteniz yok.</p>';
+                list.innerHTML = '<p style="color: var(--text-muted);">Henüz desteniz yok.</p>';
                 return;
             }
-
             decks.forEach(deck => {
                 const item = document.createElement('div');
                 item.className = 'deck-item';
                 item.innerHTML = `
                     <div class="deck-info">
                         <div class="deck-name">${deck.name}</div>
-                        <div class="deck-count">${deck.cards.length} Kart (Kalan)</div>
+                        <div class="deck-count">${deck.cards.length} / ${deck.total} Kart Kaldı</div>
                     </div>
                     <div class="deck-actions">
                         <button class="btn-outline btn-small" onclick="startStudy('${deck.id}')">Çalış</button>
@@ -321,40 +330,24 @@
         }
 
         function deleteDeck(id) {
-            const index = decks.findIndex(d => d.id === id);
-            if (index !== -1) {
-                deletedDeckCache = decks[index]; // Silineni önbelleğe al
-                decks.splice(index, 1);
-                saveToLocal();
-                
-                // Toast mesajını göster
-                const toast = document.getElementById('restore-toast');
-                toast.style.display = 'flex';
-                setTimeout(() => { toast.style.display = 'none'; deletedDeckCache = null; }, 10000); // 10 saniye sonra gizle
-            }
-        }
-
-        function restoreDeck() {
-            if (deletedDeckCache) {
-                decks.push(deletedDeckCache);
-                deletedDeckCache = null;
-                document.getElementById('restore-toast').style.display = 'none';
+            if(confirm("Bu desteyi silmek istediğinize emin misiniz?")) {
+                decks = decks.filter(d => d.id !== id);
                 saveToLocal();
             }
         }
 
-        // --- ÇALIŞMA MANTIĞI ---
+        // --- ÇALIŞMA (STUDY) EKRANI MANTIĞI ---
 
         function startStudy(id) {
             const deck = decks.find(d => d.id === id);
             if (!deck || deck.cards.length === 0) {
-                alert("Bu destede çalışılacak kart kalmadı. Silip yeniden yükleyebilirsiniz.");
+                alert("Bu destede çalışılacak kart kalmamış.");
                 return;
             }
 
             currentDeckId = id;
-            studyQueue = [...deck.cards]; // Kartların kopyasını al
-            learnedStack = []; // Undo yığınını sıfırla
+            studyQueue = [...deck.cards]; 
+            learnedStack = []; 
             currentIndex = 0;
 
             document.getElementById('dashboard-view').style.display = 'none';
@@ -368,7 +361,6 @@
             document.getElementById('study-view').style.display = 'none';
             document.getElementById('dashboard-view').style.display = 'flex';
             
-            // Eğer destede çalışılırken yarıda kesildiyse, mevcut durumu kaydet
             if (currentDeckId) {
                 const deckIndex = decks.findIndex(d => d.id === currentDeckId);
                 if (deckIndex !== -1) {
@@ -382,13 +374,15 @@
         function renderCard() {
             if (studyQueue.length === 0) {
                 document.getElementById('card-front-content').innerHTML = "Harika!";
-                document.getElementById('card-back-content').innerHTML = "Bu desteyi tamamen öğrendin.";
-                document.getElementById('progress-text').innerText = "Görev Tamamlandı";
+                document.getElementById('card-back-content').innerHTML = "Bu destedeki tüm kartları öğrendin.";
+                document.getElementById('progress-text').innerText = "Deste Tamamlandı";
                 document.getElementById('study-controls').style.display = 'none';
                 
-                // Desteyi güncelle (sıfırlandı)
                 const deckIndex = decks.findIndex(d => d.id === currentDeckId);
-                if(deckIndex !== -1) decks[deckIndex].cards = [];
+                if(deckIndex !== -1) {
+                    decks[deckIndex].cards = [];
+                    saveToLocal();
+                }
                 return;
             }
 
@@ -400,7 +394,7 @@
                 document.getElementById('card-front-content').innerHTML = studyQueue[currentIndex].q;
                 document.getElementById('card-back-content').innerHTML = studyQueue[currentIndex].a;
                 document.getElementById('progress-text').innerText = `Kart: ${currentIndex + 1} / ${studyQueue.length}`;
-            }, 150);
+            }, 200);
         }
 
         function flipCard() {
@@ -409,22 +403,16 @@
 
         function learnedCard() {
             if (studyQueue.length === 0) return;
-            
-            // Kartı öğrenilenler yığınına at (Undo için sakla)
             const learned = studyQueue.splice(currentIndex, 1)[0];
             learnedStack.push(learned);
-
             if (currentIndex >= studyQueue.length) currentIndex = 0;
             renderCard();
         }
 
         function undoCard() {
-            if (learnedStack.length === 0) return;
-            
-            // Son öğrenileni geri al ve çalışma kuyruğunun başına ekle
+            if (learnedStack.length === 0) return alert("Geri alınacak kart yok.");
             const restoredCard = learnedStack.pop();
             studyQueue.splice(currentIndex, 0, restoredCard);
-            
             renderCard();
         }
 
