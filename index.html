@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shibumi Odak | KPSS Flashcard</title>
-    <!-- PDF.js Kütüphanesi -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         :root {
@@ -17,197 +16,63 @@
             --transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        
         body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            padding: 2rem 1rem;
-            line-height: 1.6;
+            background-color: var(--bg-color); color: var(--text-main);
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; padding: 2rem 1rem; line-height: 1.6;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 2rem;
-            width: 100%;
-            max-width: 600px;
-        }
+        header { text-align: center; margin-bottom: 2rem; width: 100%; max-width: 600px; }
+        h1 { font-size: 1.5rem; font-weight: 400; letter-spacing: 2px; }
+        .subtitle { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
 
-        h1 {
-            font-size: 1.5rem;
-            font-weight: 400;
-            letter-spacing: 2px;
-            color: var(--text-main);
-        }
-
-        .subtitle {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: 0.5rem;
-        }
-
-        /* --- Girdi Ekranı (Input View) --- */
-        #input-view {
-            width: 100%;
-            max-width: 600px;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
+        /* --- Girdi Ekranı --- */
+        #input-view { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 1.5rem; }
         textarea {
-            width: 100%;
-            height: 250px;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 1rem;
-            border-radius: 8px;
-            resize: vertical;
-            outline: none;
-            transition: border var(--transition);
+            width: 100%; height: 200px; background-color: var(--card-bg);
+            border: 1px solid var(--border-color); color: var(--text-main);
+            padding: 1rem; border-radius: 8px; resize: vertical; outline: none;
         }
-
-        textarea:focus {
-            border-color: var(--text-muted);
-        }
-
-        .file-upload-wrapper {
-            position: relative;
-            width: 100%;
-        }
-
+        textarea:focus { border-color: var(--text-muted); }
+        
+        .file-upload-wrapper { position: relative; width: 100%; }
         .file-upload-label {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            padding: 1rem;
-            background-color: transparent;
-            border: 1px dashed var(--border-color);
-            border-radius: 8px;
-            cursor: pointer;
-            color: var(--text-muted);
-            transition: all var(--transition);
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; padding: 1rem; border: 1px dashed var(--border-color);
+            border-radius: 8px; cursor: pointer; color: var(--text-muted); transition: all var(--transition);
         }
-
-        .file-upload-label:hover {
-            border-color: var(--text-main);
-            color: var(--text-main);
-        }
-
-        input[type="file"] {
-            display: none;
-        }
-
+        .file-upload-label:hover { border-color: var(--text-main); color: var(--text-main); }
+        input[type="file"] { display: none; }
+        
         button {
-            background-color: var(--text-main);
-            color: var(--bg-color);
-            border: none;
-            padding: 0.8rem 2rem;
-            font-size: 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: opacity var(--transition);
+            background-color: var(--text-main); color: var(--bg-color); border: none;
+            padding: 0.8rem 2rem; font-size: 1rem; border-radius: 4px; cursor: pointer;
         }
+        button:hover { opacity: 0.9; }
+        .btn-outline { background-color: transparent; color: var(--text-main); border: 1px solid var(--border-color); }
+        .btn-outline:hover { background-color: var(--card-bg); }
+        .btn-danger { background-color: transparent; color: #ff5555; border: 1px dashed #ff5555; margin-top: 1rem; font-size: 0.8rem; padding: 0.5rem 1rem;}
 
-        button:hover {
-            opacity: 0.9;
-        }
-
-        .btn-outline {
-            background-color: transparent;
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-        }
-
-        .btn-outline:hover {
-            background-color: var(--card-bg);
-        }
-
-        /* --- Çalışma Ekranı (Study View) --- */
-        #study-view {
-            display: none;
-            width: 100%;
-            max-width: 500px;
-            flex-direction: column;
-            align-items: center;
-            gap: 2rem;
-        }
-
-        .card-container {
-            width: 100%;
-            height: 350px;
-            perspective: 1000px;
-            cursor: pointer;
-        }
-
-        .card {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            transform-style: preserve-3d;
-        }
-
-        .card.is-flipped {
-            transform: rotateY(180deg);
-        }
-
+        /* --- Çalışma Ekranı --- */
+        #study-view { display: none; width: 100%; max-width: 500px; flex-direction: column; align-items: center; gap: 2rem; }
+        .card-container { width: 100%; height: 350px; perspective: 1000px; cursor: pointer; }
+        .card { width: 100%; height: 100%; position: relative; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; }
+        .card.is-flipped { transform: rotateY(180deg); }
         .card-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 2rem;
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            overflow-y: auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+            display: flex; flex-direction: column; justify-content: center; padding: 2rem;
+            background-color: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); overflow-y: auto;
         }
-
-        .card-front {
-            align-items: center;
-            text-align: center;
-            font-size: 1.25rem;
-            font-weight: 500;
-        }
-
-        .card-back {
-            transform: rotateY(180deg);
-            font-size: 1rem;
-            align-items: flex-start;
-            justify-content: flex-start;
-        }
-
-        .controls {
-            display: flex;
-            gap: 1rem;
-            width: 100%;
-        }
-
-        .controls button {
-            flex: 1;
-        }
-
-        #progress-text {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
+        .card-front { align-items: center; text-align: center; font-size: 1.25rem; font-weight: 500; }
+        .card-back { transform: rotateY(180deg); font-size: 1rem; align-items: flex-start; justify-content: flex-start; }
+        
+        .controls { display: flex; gap: 1rem; width: 100%; }
+        .controls button { flex: 1; }
+        #progress-text { color: var(--text-muted); font-size: 0.9rem; }
+        
+        /* Kaydırma Çubuğu */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
@@ -217,20 +82,21 @@
 
     <header>
         <h1>SHIBUMI ODAK</h1>
-        <div class="subtitle">KPSS Flashcard Sistemi</div>
+        <div class="subtitle">Otomatik KPSS Flashcard Sistemi</div>
     </header>
 
     <div id="input-view">
-        <textarea id="source-text" placeholder="Metni buraya yapıştırın...&#10;&#10;SİSTEM MANTIĞI:&#10;1. Soru işaretine (?) kadar olan kısım soru olur.&#10;2. Soru işareti yoksa, iki noktaya (:) kadar olan kısım soru olur.&#10;3. Kalan her şey cevap (arka yüz) olarak kabul edilir.&#10;4. Farklı kartlar arasında mutlaka BİR BOŞ SATIR (Çift Enter) bırakın."></textarea>
+        <textarea id="source-text" placeholder="Metni buraya yapıştırın veya aşağıdaki butondan PDF yükleyin. Sistem soru numaralarını ve soru işaretlerini otomatik tanıyacaktır."></textarea>
         
         <div class="file-upload-wrapper">
             <label for="pdf-upload" class="file-upload-label" id="pdf-label">
-                + PDF Dosyası Yüklerek Metin Çıkar
+                + Uzun PDF Dosyası Yükle (Otomatik Ayrıştır)
             </label>
             <input type="file" id="pdf-upload" accept="application/pdf" />
         </div>
 
-        <button onclick="startStudy()">Kartları Oluştur ve Çalışmaya Başla</button>
+        <button onclick="startStudy()">Kartları Üret ve Kaydet</button>
+        <button id="resume-btn" class="btn-outline" style="display:none;" onclick="resumeStudy()">Kayıtlı Desteye Devam Et</button>
     </div>
 
     <div id="study-view">
@@ -247,122 +113,149 @@
             <button class="btn-outline" onclick="repeatCard()">Tekrar Et</button>
             <button onclick="learnedCard()">Öğrendim</button>
         </div>
+        
+        <button class="btn-danger" onclick="clearData()">Desteyi Sil ve Yeni Yükle</button>
     </div>
 
     <script>
-        // PDF.js Worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         let flashcards = [];
         let currentIndex = 0;
 
-        // PDF Yükleme
+        // Sayfa açıldığında Local Storage kontrolü yap
+        window.onload = () => {
+            const savedCards = localStorage.getItem('shibumi_flashcards');
+            if (savedCards && JSON.parse(savedCards).length > 0) {
+                document.getElementById('resume-btn').style.display = 'block';
+                document.getElementById('resume-btn').innerText = `Kayıtlı Desteye Devam Et (${JSON.parse(savedCards).length} Kart)`;
+            }
+        };
+
+        // PDF Yükleme ve Zeki Metin Çıkarma
         document.getElementById('pdf-upload').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (!file) return;
 
             const label = document.getElementById('pdf-label');
-            label.innerText = "PDF İşleniyor, lütfen bekleyin...";
+            label.innerText = "PDF Okunuyor, bu birkaç saniye sürebilir...";
 
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            
             let fullText = "";
 
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                 const page = await pdf.getPage(pageNum);
                 const textContent = await page.getTextContent();
-                const pageText = textContent.items.map(item => item.str).join(' ');
-                
-                fullText += pageText.replace(/\. /g, '.\n') + "\n\n";
+                // Kelimeler arası boşlukları koruyarak satırları birleştir
+                let lastY = -1;
+                textContent.items.forEach(item => {
+                    if (lastY !== item.transform[5] && lastY !== -1) fullText += '\n';
+                    fullText += item.str + ' ';
+                    lastY = item.transform[5];
+                });
+                fullText += "\n\n"; 
             }
 
+            // PDF okuma bozukluklarını düzelt (örneğin kelimenin ortasında bölünen satırlar)
+            fullText = fullText.replace(/([a-zğüşöçı])-\n([a-zğüşöçı])/g, '$1$2'); 
+            
             document.getElementById('source-text').value = fullText;
-            label.innerText = "PDF Başarıyla Yüklendi! (Kartları ayırmak için gerekirse boş satırlar bırakın)";
+            label.innerText = "PDF Başarıyla Yüklendi! Kartlar otomatik üretilecek.";
         });
 
-        // AKILLI KART ÜRETİM MANTIĞI (? ve : Tespiti)
+        // OTONOM AYRIŞTIRICI (PDF ve Metinler için)
         function generateCardsFromText(text) {
             const cards = [];
-            // Çift Enter (boş satır) ile farklı soruları birbirinden ayır
-            const blocks = text.trim().split(/\n\s*\n/);
+            
+            // 1. ADIM: Metni "1.", "2.", "Soru 1:", "Soru:" gibi belirteçlerden ZORLA böl.
+            // Bu Regex KPSS formatı için hayat kurtarıcıdır.
+            let rawChunks = text.split(/\n(?=\s*\d+\.\s)|\n(?=\s*Soru\s*\d*:?)/i);
+            
+            rawChunks.forEach(chunk => {
+                let cleanChunk = chunk.trim();
+                if (cleanChunk.length < 5) return; // Çok kısa hatalı parçaları atla
 
-            blocks.forEach(block => {
                 let question = "";
                 let answer = "";
+
+                // Eğer parça Soru işareti (?) içeriyorsa, oradan ikiye böl
+                const qIndex = cleanChunk.indexOf('?');
                 
-                // Metni tek bir string olarak alıp baştaki sondaki boşlukları temizle
-                let cleanBlock = block.trim();
-                if(!cleanBlock) return;
-
-                const qIndex = cleanBlock.indexOf('?');
-                const cIndex = cleanBlock.indexOf(':');
-
-                let splitIndex = -1;
-
-                // Bölünme noktasını belirle (Önce ?, yoksa :)
-                if (qIndex !== -1 && cIndex !== -1) {
-                    splitIndex = Math.min(qIndex, cIndex); // Hangisi önce geliyorsa
-                } else if (qIndex !== -1) {
-                    splitIndex = qIndex;
-                } else if (cIndex !== -1) {
-                    splitIndex = cIndex;
-                }
-
-                // Soru işareti veya iki nokta bulunduysa
-                if (splitIndex !== -1) {
-                    question = cleanBlock.substring(0, splitIndex + 1).trim();
-                    answer = cleanBlock.substring(splitIndex + 1).trim();
+                if (qIndex !== -1) {
+                    question = cleanChunk.substring(0, qIndex + 1).trim();
+                    answer = cleanChunk.substring(qIndex + 1).trim();
                 } else {
-                    // Hiçbiri yoksa kurtarıcı sistem: İlk satır soru, gerisi cevap
-                    const lines = cleanBlock.split('\n');
-                    question = lines[0].trim();
-                    answer = lines.slice(1).join('\n').trim();
+                    // Soru işareti yoksa, İki Nokta (:) arayışına gir
+                    const cIndex = cleanChunk.indexOf(':');
+                    if (cIndex !== -1 && cIndex < 100) { // İlk 100 karakterdeki iki noktayı başlık say
+                        question = cleanChunk.substring(0, cIndex + 1).trim();
+                        answer = cleanChunk.substring(cIndex + 1).trim();
+                    } else {
+                        // Hiçbir işaret yoksa ilk satırı soru, gerisini cevap say
+                        const lines = cleanChunk.split('\n');
+                        question = lines[0].trim();
+                        answer = lines.slice(1).join('\n').trim();
+                    }
                 }
 
-                // Cevabı maddeler halinde şık bir şekilde formatla (Altın Kural Korunuyor)
-                if (question) {
-                    let formattedAnswer = "";
-                    if (answer) {
-                        const answerLines = answer.split('\n').filter(l => l.trim() !== '');
-                        formattedAnswer = "• " + answerLines.join('<br><br> • ');
-                    } else {
-                        formattedAnswer = "Cevap eklenmemiş.";
-                    }
-
+                // Altın Kural: Cevapları ASLA bölme, alt maddeler halinde düzenle.
+                if (question && answer) {
+                    const formattedAnswer = "• " + answer.replace(/\n/g, '<br> • ');
                     cards.push({ q: question, a: formattedAnswer });
+                } else if (question && !answer) {
+                    // Sadece soru varsa ama cevap yoksa
+                    cards.push({ q: question, a: "Bu sorunun cevabı metinden çıkarılamadı." });
                 }
             });
+
             return cards;
         }
 
-        // Çalışma Modunu Başlat
         function startStudy() {
             const text = document.getElementById('source-text').value;
             flashcards = generateCardsFromText(text);
 
             if (flashcards.length === 0) {
-                alert("Metin algılanamadı. Lütfen giriş alanına veri ekleyin.");
+                alert("Metin anlaşılamadı. Lütfen içeriği kontrol edin.");
                 return;
             }
 
+            saveToLocalStorage(); // Üretilen kartları hafızaya kaydet
+            launchStudyView();
+        }
+
+        function resumeStudy() {
+            const savedCards = localStorage.getItem('shibumi_flashcards');
+            if (savedCards) {
+                flashcards = JSON.parse(savedCards);
+                launchStudyView();
+            }
+        }
+
+        function launchStudyView() {
             document.getElementById('input-view').style.display = 'none';
             document.getElementById('study-view').style.display = 'flex';
-            
             currentIndex = 0;
             renderCard();
         }
 
-        // Kartı Çiz
+        // Local Storage'a Kaydetme Fonksiyonu
+        function saveToLocalStorage() {
+            localStorage.setItem('shibumi_flashcards', JSON.stringify(flashcards));
+        }
+
         function renderCard() {
             if (flashcards.length === 0) {
-                document.getElementById('card-front-content').innerHTML = "Tebrikler!";
-                document.getElementById('card-back-content').innerHTML = "Tüm desteyi bitirdiniz.";
-                document.getElementById('progress-text').innerText = "Çalışma Tamamlandı";
+                document.getElementById('card-front-content').innerHTML = "Harika!";
+                document.getElementById('card-back-content').innerHTML = "Tüm desteyi bitirdin.";
+                document.getElementById('progress-text').innerText = "Görev Tamamlandı";
                 document.querySelector('.controls').style.display = 'none';
+                localStorage.removeItem('shibumi_flashcards'); // Bitince hafızayı temizle
                 return;
             }
 
+            document.querySelector('.controls').style.display = 'flex';
             const card = document.getElementById('flashcard');
             card.classList.remove('is-flipped'); 
 
@@ -374,15 +267,14 @@
         }
 
         function flipCard() {
-            if (flashcards.length > 0) {
-                document.getElementById('flashcard').classList.toggle('is-flipped');
-            }
+            if (flashcards.length > 0) document.getElementById('flashcard').classList.toggle('is-flipped');
         }
 
         function learnedCard() {
             if (flashcards.length === 0) return;
             flashcards.splice(currentIndex, 1);
             if (currentIndex >= flashcards.length) currentIndex = 0;
+            saveToLocalStorage(); // Öğrenileni çıkardıktan sonra güncel desteyi kaydet
             renderCard();
         }
 
@@ -390,6 +282,13 @@
             if (flashcards.length === 0) return;
             currentIndex = (currentIndex + 1) % flashcards.length;
             renderCard();
+        }
+
+        function clearData() {
+            if (confirm("Mevcut çalışma destesi kalıcı olarak silinecek. Emin misin?")) {
+                localStorage.removeItem('shibumi_flashcards');
+                location.reload(); // Sayfayı yenileyerek başa dön
+            }
         }
     </script>
 </body>
