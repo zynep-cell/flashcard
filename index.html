@@ -53,6 +53,30 @@
         }
         .btn-home:hover { background-color: #333; border-color: #555; }
 
+        /* GÜNLÜK İLERLEME BUTONU VE MODALI */
+        #daily-banner {
+            width: 100%; max-width: 600px; background-color: #1a1a1a; border: 1px solid var(--border-color);
+            padding: 1rem; border-radius: 8px; text-align: center; margin-bottom: 1rem; cursor: pointer;
+            transition: background var(--transition); display: flex; justify-content: space-between; align-items: center;
+        }
+        #daily-banner:hover { background-color: #252525; }
+        .daily-text { font-weight: 500; }
+        .daily-icon { color: var(--text-muted); font-size: 0.9rem; }
+
+        #daily-modal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000;
+            justify-content: center; align-items: center; padding: 1rem; backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: var(--bg-color); width: 100%; max-width: 600px; max-height: 80vh; border-radius: 12px;
+            border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden;
+        }
+        .modal-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 1.5rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 1rem; }
+        .learned-item { background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); }
+        .learned-q { font-weight: bold; margin-bottom: 0.5rem; color: var(--text-main); }
+        .learned-a { color: var(--text-muted); font-size: 0.95rem; }
+
         #dashboard-view { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 2rem; }
         
         .create-section, .library-section {
@@ -72,12 +96,11 @@
         .deck-item {
             display: flex; justify-content: space-between; align-items: center;
             padding: 1rem; background-color: var(--card-bg); border-radius: 8px; border: 1px solid var(--border-color);
-            position: relative;
         }
-        .deck-info { display: flex; flex-direction: column; gap: 0.3rem; }
+        .deck-info { display: flex; flex-direction: column; gap: 0.4rem; }
         .deck-name { font-weight: 500; font-size: 1.1rem; }
-        .deck-meta { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--text-muted); }
-        .deck-date { background-color: #222; padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid #333; }
+        .deck-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.75rem; color: var(--text-muted); }
+        .deck-badge { background-color: #222; padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid #333; }
         .deck-actions { display: flex; gap: 0.5rem; }
 
         #study-view { display: none; width: 100%; max-width: 550px; flex-direction: column; align-items: center; gap: 1.5rem; position: relative; }
@@ -113,6 +136,25 @@
         <h1>SHIBUMI ODAK</h1>
         <div class="subtitle">Minimalist Flashcard Sistemi</div>
     </header>
+
+    <!-- GÜNLÜK İLERLEME BUTONU -->
+    <div id="daily-banner" onclick="openDailyModal()">
+        <span class="daily-text">🌙 Bugün <span id="daily-count">0</span> kart öğrendin.</span>
+        <span class="daily-icon">Görüntüle →</span>
+    </div>
+
+    <!-- GÜNLÜK ÖĞRENİLENLER MODALI -->
+    <div id="daily-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Bugün Öğrenilenler</h2>
+                <button class="btn-outline btn-small" onclick="closeDailyModal()">Kapat</button>
+            </div>
+            <div class="modal-body" id="daily-list">
+                <!-- Öğrenilen kartlar buraya gelecek -->
+            </div>
+        </div>
+    </div>
 
     <div id="dashboard-view">
         <div class="library-section">
@@ -162,24 +204,41 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         let decks = [];
+        let dailyProgress = { date: new Date().toLocaleDateString('tr-TR'), cards: [] };
+        
         let currentDeckId = null;
         let studyQueue = [];
         let learnedStack = [];
         let currentIndex = 0;
 
         window.onload = () => {
+            // Desteleri Yükle ve Eski Verileri Onar
             const savedDecks = localStorage.getItem('shibumi_decks');
             if (savedDecks) {
                 decks = JSON.parse(savedDecks);
-                // Eski versiyondan kalan desteler için veri yapısını onar
                 decks.forEach(d => {
                     if(!d.date) d.date = new Date().toLocaleDateString('tr-TR');
+                    if(!d.lastStudied) d.lastStudied = "Henüz çalışılmadı";
                     if(!d.originalCards) {
                         d.originalCards = [...d.cards]; 
                         d.remainingCards = [...d.cards];
                     }
                 });
             }
+
+            // Günlük İlerlemeyi Yükle (Ertesi gün sıfırlanma mantığı)
+            const savedDaily = localStorage.getItem('shibumi_daily');
+            if (savedDaily) {
+                const parsedDaily = JSON.parse(savedDaily);
+                // Eğer gün değişmişse eski kartları siliyoruz, bugüne temiz başlıyoruz
+                if (parsedDaily.date === dailyProgress.date) {
+                    dailyProgress = parsedDaily;
+                } else {
+                    localStorage.removeItem('shibumi_daily');
+                }
+            }
+            
+            updateDailyUI();
             renderDashboard();
         };
 
@@ -188,6 +247,41 @@
             renderDashboard();
         }
 
+        function saveDailyProgress() {
+            localStorage.setItem('shibumi_daily', JSON.stringify(dailyProgress));
+            updateDailyUI();
+        }
+
+        function updateDailyUI() {
+            document.getElementById('daily-count').innerText = dailyProgress.cards.length;
+        }
+
+        // Günlük Öğrenilenler Modalı Kontrolleri
+        function openDailyModal() {
+            const list = document.getElementById('daily-list');
+            list.innerHTML = '';
+            
+            if (dailyProgress.cards.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-muted); text-align:center;">Bugün henüz kart öğrenmedin.</p>';
+            } else {
+                // En son öğrenilen en üstte görünsün diye ters çevirerek (reverse) ekliyoruz
+                [...dailyProgress.cards].reverse().forEach(card => {
+                    list.innerHTML += `
+                        <div class="learned-item">
+                            <div class="learned-q">${card.q}</div>
+                            <div class="learned-a">${card.a}</div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('daily-modal').style.display = 'flex';
+        }
+
+        function closeDailyModal() {
+            document.getElementById('daily-modal').style.display = 'none';
+        }
+
+        // PDF Yükleme
         document.getElementById('pdf-upload').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -279,8 +373,9 @@
                 id: Date.now().toString(),
                 name: name,
                 date: currentDate,
-                originalCards: [...newCards], // Ana kasa (Hiçbir zaman eksilmez)
-                remainingCards: [...newCards], // O an çalışılan kasa
+                lastStudied: "Henüz çalışılmadı",
+                originalCards: JSON.parse(JSON.stringify(newCards)), 
+                remainingCards: JSON.parse(JSON.stringify(newCards)), 
                 total: newCards.length
             });
 
@@ -303,7 +398,6 @@
             decks.forEach(deck => {
                 const isFinished = deck.remainingCards.length === 0;
                 const btnText = isFinished ? 'Yeniden Çalış' : 'Devam Et';
-                const btnClass = isFinished ? 'btn-outline btn-small' : 'btn-small';
                 
                 const item = document.createElement('div');
                 item.className = 'deck-item';
@@ -311,12 +405,13 @@
                     <div class="deck-info">
                         <div class="deck-name">${deck.name}</div>
                         <div class="deck-meta">
-                            <span class="deck-date">🗓️ ${deck.date}</span>
-                            <span>${deck.remainingCards.length} / ${deck.total} Kart Kaldı</span>
+                            <span class="deck-badge">➕ ${deck.date}</span>
+                            <span class="deck-badge">👁️ Son: ${deck.lastStudied}</span>
+                            <span style="margin-left:5px;">${deck.remainingCards.length} / ${deck.total} Kart Kaldı</span>
                         </div>
                     </div>
                     <div class="deck-actions">
-                        <button class="${btnClass}" onclick="startStudy('${deck.id}')" style="${isFinished ? 'background-color: var(--text-main); color: var(--bg-color);' : ''}">${btnText}</button>
+                        <button class="btn-small" onclick="startStudy('${deck.id}')" style="${isFinished ? 'background-color: var(--text-main); color: var(--bg-color);' : ''}">${btnText}</button>
                         <button class="btn-danger btn-small" onclick="deleteDeck('${deck.id}')">Sil</button>
                     </div>
                 `;
@@ -334,9 +429,9 @@
         function startStudy(id) {
             const deck = decks.find(d => d.id === id);
             
-            // Eğer deste bitmişse ("Yeniden Çalış"a tıklanmışsa) sıfırla
-            if (deck.remainingCards.length === 0) {
-                deck.remainingCards = [...deck.originalCards];
+            // YENİDEN ÇALIŞ BUG'I ÇÖZÜMÜ: Deep Copy (Derin Kopyalama) ile referans sorununu bitiriyoruz.
+            if (!deck.remainingCards || deck.remainingCards.length === 0) {
+                deck.remainingCards = JSON.parse(JSON.stringify(deck.originalCards));
             }
 
             currentDeckId = id;
@@ -345,6 +440,7 @@
             currentIndex = 0;
 
             document.getElementById('dashboard-view').style.display = 'none';
+            document.getElementById('daily-banner').style.display = 'none';
             document.getElementById('study-view').style.display = 'flex';
             document.getElementById('study-deck-title').innerText = deck.name;
             
@@ -353,12 +449,14 @@
 
         function goHome() {
             document.getElementById('study-view').style.display = 'none';
+            document.getElementById('daily-banner').style.display = 'flex';
             document.getElementById('dashboard-view').style.display = 'flex';
             
             if (currentDeckId) {
                 const deckIndex = decks.findIndex(d => d.id === currentDeckId);
                 if (deckIndex !== -1) {
-                    // Sadece çalışan kuyruğu kaydet, ana kasaya(originalCards) dokunma
+                    // Çalışma bittiğinde veya çıkıldığında "Son Çalışma" tarihini güncelle
+                    decks[deckIndex].lastStudied = new Date().toLocaleDateString('tr-TR');
                     decks[deckIndex].remainingCards = [...studyQueue];
                     saveToLocal();
                 }
@@ -369,12 +467,13 @@
         function renderCard() {
             if (studyQueue.length === 0) {
                 document.getElementById('card-front-content').innerHTML = "Tebrikler!";
-                document.getElementById('card-back-content').innerHTML = "Bu çalışma seansını tamamladın.<br>Ana sayfadan dilediğin zaman 'Yeniden Çalış' diyerek tüm desteyi sıfırlayabilirsin.";
+                document.getElementById('card-back-content').innerHTML = "Bu çalışma seansını tamamladın.<br><br>Ana sayfadan dilediğin zaman 'Yeniden Çalış' butonuna tıklayarak desteyi sıfırlayabilirsin.";
                 document.getElementById('progress-text').innerText = "Çalışma Bitti";
                 document.getElementById('study-controls').style.display = 'none';
                 
                 const deckIndex = decks.findIndex(d => d.id === currentDeckId);
                 if(deckIndex !== -1) {
+                    decks[deckIndex].lastStudied = new Date().toLocaleDateString('tr-TR');
                     decks[deckIndex].remainingCards = [];
                     saveToLocal();
                 }
@@ -399,7 +498,12 @@
         function learnedCard() {
             if (studyQueue.length === 0) return;
             const learned = studyQueue.splice(currentIndex, 1)[0];
+            
+            // Kartı hem Geri Al yığınına hem de Günlük Öğrenilenler listesine ekle
             learnedStack.push(learned);
+            dailyProgress.cards.push(learned);
+            saveDailyProgress();
+
             if (currentIndex >= studyQueue.length) currentIndex = 0;
             renderCard();
         }
@@ -407,6 +511,11 @@
         function undoCard() {
             if (learnedStack.length === 0) return alert("Geri alınacak kart yok.");
             const restoredCard = learnedStack.pop();
+            
+            // Eğer kartı geri alırsak, Günlük İlerleme listesinden de (en sondakini) çıkarmalıyız
+            dailyProgress.cards.pop();
+            saveDailyProgress();
+
             studyQueue.splice(currentIndex, 0, restoredCard);
             renderCard();
         }
